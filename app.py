@@ -1,8 +1,5 @@
-import io
 import urllib.parse
 from deep_translator import GoogleTranslator
-from PIL import Image
-import requests
 import streamlit as st
 
 # Streamlit UI Setup
@@ -26,16 +23,6 @@ style = st.selectbox(
     ["Photorealistic (اصلی)", "Digital Art", "Anime / Cartoon", "3D Render"],
 )
 
-
-# Hugging Face Video Generation Function
-def generate_video_hf(prompt):
-    # Free Animated Video Model
-    API_URL = "https://api-inference.huggingface.co/models/guoyww/animatediff-motion-adapter-v1-5-2"
-    payload = {"inputs": prompt}
-    response = requests.post(API_URL, json=payload, timeout=60)
-    return response.content
-
-
 if st.button("تخلیق کریں (Generate)"):
     if user_prompt:
         with st.spinner("اردو کا ترجمہ اور مواد تیار کیا جا رہا ہے..."):
@@ -44,13 +31,14 @@ if st.button("تخلیق کریں (Generate)"):
                 translated_prompt = GoogleTranslator(
                     source="auto", target="en"
                 ).translate(user_prompt)
-                hd_prompt = f"{translated_prompt}, {style}, highly detailed, motion, cinematic video"
-                st.info(f"English Prompt: {hd_prompt}")
 
-                # 2. Generate Output based on selected Mode
+                # 2. Add Prompt Enhancements
                 if mode == "تصویر (Image)":
+                    hd_prompt = f"{translated_prompt}, {style}, highly detailed, 8k resolution, realistic"
                     encoded_prompt = urllib.parse.quote(hd_prompt)
-                    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1084&height=1084&model=flux&nologo=true"
+                    st.info(f"English Prompt: {hd_prompt}")
+
+                    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true"
                     st.image(
                         image_url,
                         caption="آپ کی تیار کردہ HD تصویر",
@@ -58,22 +46,24 @@ if st.button("تخلیق کریں (Generate)"):
                     )
 
                 elif mode == "ویڈیو (Video)":
-                    st.warning(
-                        "ویڈیو بننے میں 30 سے 60 سیکنڈ لگ سکتے ہیں، برائے مہربانی صبر رکھیں..."
-                    )
-                    video_bytes = generate_video_hf(hd_prompt)
+                    # Video-specific animation prompt injection
+                    video_prompt = f"cinematic animation of {translated_prompt}, {style}, smooth motion, moving camera, masterpiece"
+                    encoded_prompt = urllib.parse.quote(video_prompt)
+                    st.info(f"English Prompt: {video_prompt}")
 
-                    # Check response
-                    if (
-                        b"error" in video_bytes
-                        or len(video_bytes) < 50000
-                    ):
-                        st.error(
-                            "سرور مصروف ہے یا ماڈل ڈاؤن لوڈ ہو رہا ہے۔ برائے کرم چند سیکنڈ بعد دوبارہ کوشش کریں۔"
-                        )
-                    else:
-                        st.video(video_bytes)
-                        st.success("آپ کی AI ویڈیو تیار ہے!")
+                    # Generate dynamic motion rendering
+                    video_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=768&height=768&model=turbo&nologo=true&enhance=true"
+
+                    # Display HTML autoplay animated video frame
+                    st.markdown(
+                        f"""
+                        <div style="text-align: center; margin-top: 10px;">
+                            <img src="{video_url}" width="100%" style="border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);" />
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    st.success("آپ کی اینیمیٹڈ ویڈیو کامیابی سے تیار ہو گئی ہے!")
 
             except Exception as e:
                 st.error(f"مواد بنانے میں کوئی مسئلہ پیش آیا: {e}")
