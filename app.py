@@ -1,47 +1,40 @@
-import io
-import requests
 import streamlit as st
 from deep_translator import GoogleTranslator
+import requests
+import io
 from PIL import Image
 
-st.set_page_config(page_title="AI Image Generator", page_icon="🎨")
-
-st.title("🎨 ہمارا اپنا AI جنریٹر")
+# Streamlit UI Setup
+st.set_page_config(page_title="Urdu AI Generator", page_icon="🎨")
+st.title("🎨 ہمارا AI جنریٹر")
 st.write("کوئی بھی تفصیل اردو یا انگریزی میں لکھیں اور مفت تصویر بنائیں!")
 
-# Hugging Face Free Inference API URL
-API_URL = (
-    "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5"
-)
+# User Input
+user_prompt = st.text_input("یہاں اپنی تصویر کی تفصیل لکھیں:", "ایک خوبصورت وادی میں سورج غروب ہو رہا ہے")
 
+# Hugging Face Free API Endpoint
+API_URL = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell"
 
-def query_api(payload):
+def generate_image(prompt):
+    payload = {"inputs": prompt}
     response = requests.post(API_URL, json=payload)
     return response.content
 
-
-prompt = st.text_area(
-    "پرامپٹ لکھیں:",
-    placeholder="مثال: سرسبز پہاڑوں کے درمیان خوبصورت جھیل",
-)
-
-if st.button("تصویر بنائیں"):
-    if prompt:
-        with st.spinner("تصویر بن رہی ہے..."):
+if st.button("تصویر بنائیں (Generate Image)"):
+    if user_prompt:
+        with st.spinner("اردو کا ترجمہ اور تصویر تیار کی جا رہی ہے..."):
             try:
-                # اردو سے انگلش ترجمہ
-                translated = GoogleTranslator(
-                    source="auto", target="en"
-                ).translate(prompt)
-
-                # API کے ذریعے تصویر جنریٹ کرنا
-                image_bytes = query_api({"inputs": translated})
+                # 1. Translate Urdu to English
+                translated_prompt = GoogleTranslator(source='auto', target='en').translate(user_prompt)
+                st.info(f"English Prompt: {translated_prompt}")
+                
+                # 2. Call Hugging Face API
+                image_bytes = generate_image(translated_prompt)
                 image = Image.open(io.BytesIO(image_bytes))
-
-                st.image(image, caption=f"ترجمہ: {translated}")
+                
+                # 3. Display Image
+                st.image(image, caption="آپ کی تیار کردہ تصویر", use_container_width=True)
             except Exception as e:
-                st.error(
-                    "تصویر بنانے میں مسئلہ آیا، براہِ کرم دوبارہ کوشش کریں۔"
-                )
+                st.error("تصویر بنانے میں کوئی مسئلہ پیش آیا ہے۔ براہِ کرم دوبارہ کوشش کریں۔")
     else:
-        st.warning("براہِ کرم پہلے پرامپٹ درج کریں۔")
+        st.warning("براہِ کرم پہلے کوئی کیپشن لکھیں۔")
