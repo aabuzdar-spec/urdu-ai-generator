@@ -1,5 +1,8 @@
+import io
 import urllib.parse
 from deep_translator import GoogleTranslator
+from PIL import Image
+import requests
 import streamlit as st
 
 # Streamlit UI Setup
@@ -23,6 +26,16 @@ style = st.selectbox(
     ["Photorealistic (اصلی)", "Digital Art", "Anime / Cartoon", "3D Render"],
 )
 
+
+# Hugging Face Video Generation Function
+def generate_video_hf(prompt):
+    # Free Animated Video Model
+    API_URL = "https://api-inference.huggingface.co/models/guoyww/animatediff-motion-adapter-v1-5-2"
+    payload = {"inputs": prompt}
+    response = requests.post(API_URL, json=payload, timeout=60)
+    return response.content
+
+
 if st.button("تخلیق کریں (Generate)"):
     if user_prompt:
         with st.spinner("اردو کا ترجمہ اور مواد تیار کیا جا رہا ہے..."):
@@ -31,16 +44,12 @@ if st.button("تخلیق کریں (Generate)"):
                 translated_prompt = GoogleTranslator(
                     source="auto", target="en"
                 ).translate(user_prompt)
-
-                # 2. Add HD keywords
-                hd_prompt = f"{translated_prompt}, {style}, highly detailed, 8k resolution, cinematic"
+                hd_prompt = f"{translated_prompt}, {style}, highly detailed, motion, cinematic video"
                 st.info(f"English Prompt: {hd_prompt}")
 
-                # 3. Encode Prompt
-                encoded_prompt = urllib.parse.quote(hd_prompt)
-
-                # 4. Generate Output based on selected Mode
+                # 2. Generate Output based on selected Mode
                 if mode == "تصویر (Image)":
+                    encoded_prompt = urllib.parse.quote(hd_prompt)
                     image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1084&height=1084&model=flux&nologo=true"
                     st.image(
                         image_url,
@@ -49,19 +58,22 @@ if st.button("تخلیق کریں (Generate)"):
                     )
 
                 elif mode == "ویڈیو (Video)":
-                    st.toast("ویڈیو پروسیس ہو رہی ہے، تھوڑا انتظار فرمائیں...")
-                    # Pollinations Video / Motion GIF API
-                    video_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=512&height=512&model=turbo&nologo=true&seed={st.session_state.get('seed', 42)}"
+                    st.warning(
+                        "ویڈیو بننے میں 30 سے 60 سیکنڈ لگ سکتے ہیں، برائے مہربانی صبر رکھیں..."
+                    )
+                    video_bytes = generate_video_hf(hd_prompt)
 
-                    # Animated Generation Output
-                    st.image(
-                        video_url,
-                        caption="آپ کی تیار کردہ اینیمیٹڈ ویڈیو",
-                        use_container_width=True,
-                    )
-                    st.success(
-                        "نوٹ: یہ شارٹ اینیمیٹڈ/لوپ ویڈیو تیار کی گئی ہے۔"
-                    )
+                    # Check response
+                    if (
+                        b"error" in video_bytes
+                        or len(video_bytes) < 50000
+                    ):
+                        st.error(
+                            "سرور مصروف ہے یا ماڈل ڈاؤن لوڈ ہو رہا ہے۔ برائے کرم چند سیکنڈ بعد دوبارہ کوشش کریں۔"
+                        )
+                    else:
+                        st.video(video_bytes)
+                        st.success("آپ کی AI ویڈیو تیار ہے!")
 
             except Exception as e:
                 st.error(f"مواد بنانے میں کوئی مسئلہ پیش آیا: {e}")
