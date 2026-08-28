@@ -36,37 +36,34 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.markdown(
-    '<p class="sub-text">مکمل شارپ فوکس اور درست سبجیکٹ کے ساتھ HD تصاویر بنائیں!</p>',
+    '<p class="sub-text">بغیر کسی ایرر کے 100% درست اور واضح HD تصاویر بنائیں!</p>',
     unsafe_allow_html=True,
 )
 
 user_prompt = st.text_input(
     "تصویر کی تفصیل (Urdu / English):",
-    placeholder="مثال: ایک عورت اپنے کتے کے ساتھ پارک میں بیٹھی ہے",
+    placeholder="مثال: ایک آدمی جو روڈ پر دوڑ رہا ہے",
 )
 
 style = st.selectbox(
     "تصویر کا آرٹ سٹائل منتخب کریں:",
     [
-        "Ultra Sharp Photo (مکمل صاف اور واضح فوکس)",
-        "Digital Art (ڈیجیٹل آرٹ)",
-        "3D Pixar Animation (کارٹون سٹائل)",
-        "Oil Painting (روایتی پینٹنگ)",
+        "Photorealistic (بالکل اصلی اور صاف)",
+        "3D Animation (کارٹون سٹائل)",
+        "Digital Painting (ڈیجیٹل آرٹ)",
     ],
 )
 
 if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
     if user_prompt:
-        with st.spinner(
-            "تصویر پروسیس ہو رہی ہے، تمام کریکٹرز کو واضح کیا جا رہا ہے..."
-        ):
+        with st.spinner("تصویر کی پروسیسنگ کی جا رہی ہے..."):
             try:
-                # 1. Translate User Input
+                # 1. Direct and clean translation
                 translated_prompt = GoogleTranslator(
                     source="auto", target="en"
                 ).translate(user_prompt)
 
-                # Clean basic filler words that mess up AI focus
+                # Filter basic noisy phrases
                 unwanted_words = [
                     "picture of",
                     "image of",
@@ -80,15 +77,14 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                 for word in unwanted_words:
                     clean_prompt = clean_prompt.replace(word, "")
 
-                # 2. Advanced Photography Keywords to force ZERO BLUR & DEEP FOCUS
+                # 2. Short, simple and non-confusing prompts
                 style_enhancers = {
-                    "Ultra Sharp Photo (مکمل صاف اور واضح فوکس)": "tack sharp, deep focus, hyperfocal distance, sharp subject and clear background, 8k resolution photo",
-                    "Digital Art (ڈیجیٹل آرٹ)": "clean vector digital art, vivid colors, fully sharp illustration",
-                    "3D Pixar Animation (کارٹون سٹائل)": "3d animated style, clear characters, crisp details, vivid rendering",
-                    "Oil Painting (روایتی پینٹنگ)": "masterpiece oil painting, clear artwork composition",
+                    "Photorealistic (بالکل اصلی اور صاف)": "photograph, highly detailed, sharp focus, 8k",
+                    "3D Animation (کارٹون سٹائل)": "3d render, pixar style, bright colors",
+                    "Digital Painting (ڈیجیٹل آرٹ)": "digital artwork, vibrant colors, clean design",
                 }
 
-                # Construct final prompt (Subject Priority)
+                # Subject MUST come first
                 final_prompt = (
                     f"{clean_prompt.strip()}, {style_enhancers[style]}"
                 )
@@ -97,8 +93,8 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                 random_seed = random.randint(1, 999999)
                 encoded_prompt = urllib.parse.quote(final_prompt)
 
-                # 3. Enhanced API Call with URL Parameters: &enhance=true forces AI to adhere to exact prompt
-                image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={random_seed}&enhance=true"
+                # 3. Use 'flux-realism' model without broken 'enhance' parameters
+                image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux-realism&nologo=true&seed={random_seed}"
 
                 response = requests.get(image_url, timeout=30)
 
@@ -123,7 +119,7 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                     )
                 else:
                     st.error(
-                        "سرور سے جواب موصول نہیں ہوا۔ براہ کرم دوبارہ کوشش کریں۔"
+                        "سرور اس وقت مصروف ہے، براہ کرم ایک سیکنڈ بعد دوبارہ کوشش کریں۔"
                     )
 
             except Exception as e:
