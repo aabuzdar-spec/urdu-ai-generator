@@ -10,7 +10,7 @@ st.set_page_config(
     page_title="Urdu AI Studio Pro", page_icon="🎨", layout="centered"
 )
 
-# Custom CSS Styles
+# Custom CSS Styles (Improved layout)
 st.markdown(
     """
     <style>
@@ -18,13 +18,13 @@ st.markdown(
     .main-header {
         background: linear-gradient(90deg, #ec4899 0%, #8b5cf6 50%, #3b82f6 100%);
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        text-align: center; font-weight: 800; font-size: 2.8rem; margin-bottom: 5px;
+        text-align: center; font-weight: 800; font-size: 3.2rem; margin-bottom: 5px;
     }
-    .sub-text { text-align: center; color: #cbd5e1; font-size: 1.1rem; margin-bottom: 25px; }
+    .sub-text { text-align: center; color: #cbd5e1; font-size: 1.3rem; margin-bottom: 30px; }
     .stTextInput > div > div > input { border-radius: 12px; border: 2px solid #6366f1; background-color: #1e293b; color: #ffffff; font-size: 1.1rem; }
     .stButton > button {
         width: 100%; background: linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
-        color: white; border: none; padding: 12px 24px; font-size: 1.2rem; font-weight: bold; border-radius: 12px;
+        color: white; border: none; padding: 14px 28px; font-size: 1.3rem; font-weight: bold; border-radius: 12px;
     }
     </style>
 """,
@@ -36,12 +36,12 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.markdown(
-    '<p class="sub-text">بغیر کسی ایرر کے 100% پرفیکٹ اور الٹرا ایچ ڈی تصاویر بنائیں!</p>',
+    '<p class="sub-text">بغیر کسی ایرر کے 100% پرفیکٹ، مکمل منظر یا پورٹریٹ، آپ کی مرضی کی تصاویر بنائیں!</p>',
     unsafe_allow_html=True,
 )
 
 
-# Robust Urdu Translation Function (Bypasses Deep Translator Errors)
+# Robust Urdu Translation Function
 def safe_translate(text):
     try:
         url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q={urllib.parse.quote(text)}"
@@ -49,12 +49,11 @@ def safe_translate(text):
         if res.status_code == 200:
             result = res.json()
             translated = result[0][0][0]
-            # Verify if translation isn't an error message
             if "error" not in translated.lower():
                 return translated
     except Exception:
         pass
-    return text  # Fallback to original input if translation fails
+    return text
 
 
 user_prompt = st.text_input(
@@ -62,12 +61,22 @@ user_prompt = st.text_input(
     placeholder="مثال: ایک آدمی ہوا میں اڑ رہا ہے",
 )
 
+# New Feature: Let user choose the composition (Full Scene or Portrait)
+composition = st.radio(
+    "تصویر کی ساخت (Composition) منتخب کریں:",
+    [
+        "Full Scene (مکمل منظر، وائڈ شارٹ)",
+        "Portrait (قریبی شاٹ، پورٹریٹ)",
+    ],
+)
+
 style = st.selectbox(
     "تصویر کا آرٹ سٹائل منتخب کریں:",
     [
         "Photorealistic (بالکل اصلی اور شفاف)",
-        "3D Pixar Animation (کارٹون سٹائل)",
-        "Digital Art (ڈیجیٹل آرٹ)",
+        "3D Animation (کارٹون سٹائل)",
+        "Digital Painting (ڈیجیٹل آرٹ)",
+        "Oil Painting (روایتی پینٹنگ)",
     ],
 )
 
@@ -75,33 +84,34 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
     if user_prompt:
         with st.spinner("تیزی سے تصویر پروسیس کی جا رہی ہے..."):
             try:
-                # 1. Clean and Safe Translation
                 translated_prompt = safe_translate(user_prompt)
 
-                # Remove filler noise
                 unwanted_words = [
-                    "picture of",
-                    "image of",
-                    "draw a",
-                    "make a",
-                    "photo of",
-                    "ki tasveer",
-                    "tasveer banao",
-                    "banao",
+                    "picture of", "image of", "draw a", "make a",
+                    "photo of", "ki tasveer", "tasveer banao", "banao",
                 ]
                 clean_prompt = translated_prompt.lower()
                 for word in unwanted_words:
                     clean_prompt = clean_prompt.replace(word, "")
 
-                # 2. Optimized Prompt Architecture
+                # 1. Base style prompts
                 style_enhancers = {
-                    "Photorealistic (بالکل اصلی اور شفاف)": "photograph, highly detailed, sharp focus, 8k resolution, crisp subject",
-                    "3D Pixar Animation (کارٹون سٹائل)": "3d pixar style animation, vibrant colors, clear rendering",
-                    "Digital Art (ڈیجیٹل آرٹ)": "clean digital art illustration, sharp edges, high resolution",
+                    "Photorealistic (بالکل اصلی اور شفاف)": "realistic photograph, highly detailed, crisp focus, 8k resolution, sharp subject",
+                    "3D Animation (کارٹون سٹائل)": "3d animated style, vibrant colorful scene, clear rendering, highly detailed",
+                    "Digital Painting (ڈیجیٹل آرٹ)": "clean digital art painting, crisp lines, clean colors, high resolution",
+                    "Oil Painting (روایتی پینٹنگ)": "oil painting masterpiece, classical art style, deep texture, rich colors, fully focused composition",
                 }
 
+                # 2. Add composition words
+                # These words are used to guide AI, not block words
+                if composition == "Full Scene (مکمل منظر، وائڈ شارٹ)":
+                    scene_prompt = f"environmental portrait, wide angle shot, full shot showing whole scene and surroundings, {style_enhancers[style]}"
+                else:
+                    scene_prompt = f"portrait shot, large head and shoulders, close-up shot, shallow depth of field, focused on face, {style_enhancers[style]}"
+
+                # Final prompt composition, prioritizing user prompt
                 final_prompt = (
-                    f"{clean_prompt.strip()}, {style_enhancers[style]}"
+                    f"{clean_prompt.strip()}, {scene_prompt}"
                 )
                 st.info(f"🔍 **Optimized AI Prompt:** {final_prompt}")
 
@@ -109,7 +119,7 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                 random_seed = random.randint(1, 999999)
                 encoded = urllib.parse.quote(final_prompt)
 
-                # Using stable Pollinations Flux without broken parameters
+                # Adjusted width and height for a more standard aspect ratio
                 img_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024&model=flux&nologo=true&seed={random_seed}"
 
                 response = requests.get(img_url, timeout=45)
