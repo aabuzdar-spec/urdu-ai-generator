@@ -36,20 +36,20 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.markdown(
-    '<p class="sub-text">واضح فوکس اور تمام کریکٹرز کے ساتھ HD تصاویر بنائیں!</p>',
+    '<p class="sub-text">واضح اور سادہ طریقہ کار کے ساتھ AI تصاویر بنائیں!</p>',
     unsafe_allow_html=True,
 )
 
 user_prompt = st.text_input(
     "تصویر کی تفصیل (Urdu / English):",
-    placeholder="مثال: ایک عورت اپنے ہاتھ میں بلی پکڑے ہوئے ہے",
+    placeholder="مثال: ایک عورت اور ایک بلی ایک ساتھ بیٹھے ہیں",
 )
 
 style = st.selectbox(
     "تصویر کا آرٹ سٹائل منتخب کریں:",
     [
-        "Photorealistic Full Scene (مکمل منظر اور واضح فوکس)",
-        "Ultra Detailed HD (الٹرا ڈیٹیل)",
+        "Photorealistic (قدرتی منظر)",
+        "Digital Art (ڈیجیٹل آرٹ)",
         "3D Pixar Animation (کارٹون سٹائل)",
         "Oil Painting (روایتی پینٹنگ)",
     ],
@@ -57,13 +57,14 @@ style = st.selectbox(
 
 if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
     if user_prompt:
-        with st.spinner("تمام کریکٹرز کو فریم میں لایا جا رہا ہے..."):
+        with st.spinner("تصویر تیار کی جا رہی ہے..."):
             try:
+                # 1. Translate Urdu to English directly
                 translated_prompt = GoogleTranslator(
                     source="auto", target="en"
                 ).translate(user_prompt)
 
-                # Clean unwanted words
+                # Clean unwanted phrase words
                 unwanted_words = [
                     "picture of",
                     "image of",
@@ -72,30 +73,29 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                     "photo of",
                     "ki tasveer",
                     "tasveer banao",
-                    "portrait",
                 ]
                 clean_prompt = translated_prompt.lower()
                 for word in unwanted_words:
                     clean_prompt = clean_prompt.replace(word, "")
 
-                # Style Enhancers strictly focused on WIDE ANGLE and CLEAR FOCUS
+                # 2. Minimal, clean enhancers to avoid ignoring the main subject
                 style_enhancers = {
-                    "Photorealistic Full Scene (مکمل منظر اور واضح فوکس)": "wide angle shot, medium shot, fully showing both subjects clearly, crisp focus, 8k photo, sharp composition",
-                    "Ultra Detailed HD (الٹرا ڈیٹیل)": "wide shot showing full scene, highly detailed, sharp details, clear focus, 8k resolution",
-                    "3D Pixar Animation (کارٹون سٹائل)": "3d pixar animation style, wide camera angle, clear characters, vibrant render",
-                    "Oil Painting (روایتی پینٹنگ)": "masterpiece oil painting, clear composition showing all elements clearly",
+                    "Photorealistic (قدرتی منظر)": "realistic photo, high quality, clear details",
+                    "Digital Art (ڈیجیٹل آرٹ)": "clean digital art, vivid colors, high resolution",
+                    "3D Pixar Animation (کارٹون سٹائل)": "3d animated style, colorful, clear characters",
+                    "Oil Painting (روایتی پینٹنگ)": "oil painting style, artistic composition",
                 }
 
-                # Construct prompt with wide-angle priority
+                # Subject goes FIRST, style goes LAST
                 enhanced_prompt = (
-                    f"{style_enhancers[style]}, {clean_prompt.strip()}"
+                    f"{clean_prompt.strip()}, {style_enhancers[style]}"
                 )
-                st.info(f"🔍 **Auto-Enhanced Prompt:** {enhanced_prompt}")
+                st.info(f"🔍 **Prompt:** {enhanced_prompt}")
 
                 random_seed = random.randint(1, 99999)
                 encoded_prompt = urllib.parse.quote(enhanced_prompt)
 
-                # Fetch Image using Flux model
+                # Using Flux model directly
                 image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={random_seed}"
 
                 response = requests.get(image_url)
