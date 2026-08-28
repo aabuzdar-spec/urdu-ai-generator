@@ -36,7 +36,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.markdown(
-    '<p class="sub-text">واضح اور سادہ طریقہ کار کے ساتھ AI تصاویر بنائیں!</p>',
+    '<p class="sub-text">کرسپ اور 100% شارپ فوکس کے ساتھ HD تصاویر بنائیں!</p>',
     unsafe_allow_html=True,
 )
 
@@ -48,7 +48,7 @@ user_prompt = st.text_input(
 style = st.selectbox(
     "تصویر کا آرٹ سٹائل منتخب کریں:",
     [
-        "Photorealistic (قدرتی منظر)",
+        "Photorealistic (کرسپ اور صاف فوکس)",
         "Digital Art (ڈیجیٹل آرٹ)",
         "3D Pixar Animation (کارٹون سٹائل)",
         "Oil Painting (روایتی پینٹنگ)",
@@ -57,14 +57,12 @@ style = st.selectbox(
 
 if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
     if user_prompt:
-        with st.spinner("تصویر تیار کی جا رہی ہے..."):
+        with st.spinner("بلر ختم کر کے تصویر کو مکمل شارپ کیا جا رہا ہے..."):
             try:
-                # 1. Translate Urdu to English directly
                 translated_prompt = GoogleTranslator(
                     source="auto", target="en"
                 ).translate(user_prompt)
 
-                # Clean unwanted phrase words
                 unwanted_words = [
                     "picture of",
                     "image of",
@@ -78,15 +76,13 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                 for word in unwanted_words:
                     clean_prompt = clean_prompt.replace(word, "")
 
-                # 2. Minimal, clean enhancers to avoid ignoring the main subject
                 style_enhancers = {
-                    "Photorealistic (قدرتی منظر)": "realistic photo, high quality, clear details",
-                    "Digital Art (ڈیجیٹل آرٹ)": "clean digital art, vivid colors, high resolution",
-                    "3D Pixar Animation (کارٹون سٹائل)": "3d animated style, colorful, clear characters",
+                    "Photorealistic (کرسپ اور صاف فوکس)": "realistic photo, highly detailed",
+                    "Digital Art (ڈیجیٹل آرٹ)": "clean digital art, vivid colors",
+                    "3D Pixar Animation (کارٹون سٹائل)": "3d animated style, colorful",
                     "Oil Painting (روایتی پینٹنگ)": "oil painting style, artistic composition",
                 }
 
-                # Subject goes FIRST, style goes LAST
                 enhanced_prompt = (
                     f"{clean_prompt.strip()}, {style_enhancers[style]}"
                 )
@@ -95,8 +91,13 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                 random_seed = random.randint(1, 99999)
                 encoded_prompt = urllib.parse.quote(enhanced_prompt)
 
-                # Using Flux model directly
-                image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={random_seed}"
+                # Negative prompt to strictly block blur and bokeh
+                negative_prompt = urllib.parse.quote(
+                    "blur, blurry, out of focus, bokeh, depth of field, hazy, soft focus, blurry background"
+                )
+
+                # API Call with negative prompt and seed optimization
+                image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={random_seed}&negative={negative_prompt}"
 
                 response = requests.get(image_url)
                 img = Image.open(io.BytesIO(response.content))
