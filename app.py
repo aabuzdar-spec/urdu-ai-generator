@@ -36,28 +36,28 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.markdown(
-    '<p class="sub-text">مفت اور پرفیکٹ فوکس کے ساتھ HD تصاویر بنائیں!</p>',
+    '<p class="sub-text">پرفیکٹ فوکس اور قدرتی توازن کے ساتھ HD تصاویر بنائیں!</p>',
     unsafe_allow_html=True,
 )
 
 user_prompt = st.text_input(
     "تصویر کی تفصیل (Urdu / English):",
-    placeholder="مثال: ایک آدمی اور ایک کتا اکٹھے بیٹھے ہیں",
+    placeholder="مثال: ایک آدمی اور اس کا کتا ایک ساتھ روڈ پر کھڑے ہیں",
 )
 
 style = st.selectbox(
     "تصویر کا آرٹ سٹائل منتخب کریں:",
     [
-        "Photorealistic (بالکل اصلی اور وائڈ فوکس)",
-        "Ultra Detailed Portrait (تفصیلی پورٹریٹ)",
-        "3D Pixar / Animation (کارٹون سٹائل)",
+        "Photorealistic (قدرتی منظر)",
+        "Ultra Detailed (تفصیلی ایچ ڈی)",
+        "3D Pixar Animation (کارٹون سٹائل)",
         "Oil Painting (روایتی پینٹنگ)",
     ],
 )
 
 if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
     if user_prompt:
-        with st.spinner("تصویر پروسیس اور فوکس کی جا رہی ہے..."):
+        with st.spinner("تصویر کو متوازن اور فوکس کیا جا رہا ہے..."):
             try:
                 translated_prompt = GoogleTranslator(
                     source="auto", target="en"
@@ -76,23 +76,23 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                 for word in unwanted_words:
                     clean_prompt = clean_prompt.replace(word, "")
 
-                # Strict multi-subject composition keywords added at the front
+                # Natural enhancement without breaking image context
                 style_enhancers = {
-                    "Photorealistic (بالکل اصلی اور وائڈ فوکس)": "wide shot, full body shot, both subjects visible together in frame, sharp focus, 8k resolution, clear details, professional photography",
-                    "Ultra Detailed Portrait (تفصیلی پورٹریٹ)": "medium shot showing both subjects, sharp focus, crisp details, 8k resolution",
-                    "3D Pixar / Animation (کارٹون سٹائل)": "wide shot 3d render, pixar character style, vibrant lighting, sharp focus",
-                    "Oil Painting (روایتی پینٹنگ)": "masterpiece oil painting, clear composition showing all elements, sharp focus",
+                    "Photorealistic (قدرتی منظر)": "wide shot photograph, clear sharp details, natural composition, 8k resolution",
+                    "Ultra Detailed (تفصیلی ایچ ڈی)": "cinematic wide photo, 8k resolution, highly detailed, perfect lighting",
+                    "3D Pixar Animation (کارٹون سٹائل)": "3d animated film style, vibrant colors, clear details",
+                    "Oil Painting (روایتی پینٹنگ)": "masterpiece oil painting, clear composition, artistic brushwork",
                 }
 
-                # Force framing setup before the translated prompt
-                enhanced_prompt = f"{style_enhancers[style]}, {clean_prompt.strip()}, high clarity, fully in focus"
+                enhanced_prompt = (
+                    f"{clean_prompt.strip()}, {style_enhancers[style]}"
+                )
                 st.info(f"🔍 **Auto-Enhanced Prompt:** {enhanced_prompt}")
 
-                # Random seed generation for dynamic render
                 random_seed = random.randint(1, 99999)
                 encoded_prompt = urllib.parse.quote(enhanced_prompt)
 
-                # Using Flux model with enhanced framing logic
+                # Using Flux model for overall better spatial layout
                 image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={random_seed}"
 
                 response = requests.get(image_url)
