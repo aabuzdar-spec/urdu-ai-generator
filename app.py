@@ -1,16 +1,16 @@
 import io
+import json
 import random
 import urllib.parse
 from PIL import Image
 import requests
 import streamlit as st
-from googletrans import Translator # We now use this reliable library
 
 st.set_page_config(
     page_title="Urdu AI Studio Pro", page_icon="🎨", layout="centered"
 )
 
-# Custom CSS Styles (Enhanced UI with all options)
+# Custom CSS Styles
 st.markdown(
     """
     <style>
@@ -40,6 +40,22 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+
+# Reliable Translation without extra packages
+def translate_urdu(text):
+    try:
+        url = "https://translate.googleapis.com/translate_a/single"
+        params = {"client": "gtx", "sl": "ur", "tl": "en", "dt": "t", "q": text}
+        res = requests.get(url, params=params, timeout=10)
+        if res.status_code == 200:
+            data = res.json()
+            # Extract clean translated text
+            return "".join([item[0] for item in data[0] if item[0]])
+    except Exception:
+        pass
+    return text
+
+
 user_prompt_urdu = st.text_input(
     "تصویر کی تفصیل (اردو میں لکھیں):",
     placeholder="مثال: ایک برفانی ریچھ بناؤ",
@@ -54,7 +70,7 @@ composition = st.radio(
     ],
 )
 
-# restored all style options
+# Restored all style options
 style = st.selectbox(
     "تصویر کا آرٹ سٹائل منتخب کریں:",
     [
@@ -72,65 +88,73 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
     if user_prompt_urdu:
         with st.spinner("تصویر تیار کی جا رہی ہے..."):
             try:
-                # 1. New, more robust translation logic
-                translator = Translator()
-                translated = translator.translate(user_prompt_urdu, src='ur', dest='en')
-                translated_prompt = translated.text
-                
-                if translated_prompt.strip() == user_prompt_urdu.strip():
-                     # Fallback logic if googletrans fails: use the original text with a warning
-                     # but in practice, googletrans is much more reliable than our manual function.
-                     translated_prompt = f"error translating Urdu prompt: {user_prompt_urdu}"
-                
-                st.info(f"🔍 **AI سمجھا:** {translated_prompt}")
+                # 1. Translate Urdu Prompt to English
+                translated_prompt = translate_urdu(user_prompt_urdu)
+
+                # Remove extra command words in English
+                unwanted_words = [
+                    "make a",
+                    "draw a",
+                    "create a",
+                    "picture of",
+                    "image of",
+                ]
+                clean_prompt = translated_prompt.lower()
+                for w in unwanted_words:
+                    clean_prompt = clean_prompt.replace(w, "")
+
+                st.info(f"🔍 **AI سمجھا:** {clean_prompt.strip()}")
 
                 # 2. Add style and composition enhancers
                 style_enhancers = {
-                    "Photorealistic (بالکل اصلی اور شفاف)": "realistic photograph, highly detailed, crisp focus, 8k resolution, sharp subject",
-                    "3D Pixar Animation (کارٹون سٹائل)": "3d animated style, vibrant colorful scene, clear rendering",
-                    "Pixel Art (پکسل آرٹ)": "pixel art illustration, retro game style, defined pixels, clean composition",
-                    "Oil Painting (روایتی پینٹنگ)": "oil painting style, classical art, deep texture, classical lighting",
-                    "Watercolor (واٹر کلر آرٹ)": "watercolor painting, soft colors, transparent layers, artistic style",
-                    "Vaporwave (ویپر ویو سٹائل)": "vaporwave aesthetic, pastel colors, retro 80s feel, neon lighting",
-                    "Comic Book (کامک بک سٹائل)": "comic book illustration, bold lines, dramatic lighting, vivid colors",
+                    "Photorealistic (بالکل اصلی اور شفاف)": "photograph, realistic, highly detailed, 8k resolution, sharp focus",
+                    "3D Pixar Animation (کارٹون سٹائل)": "3d pixar style animation, vibrant colors, clean render",
+                    "Pixel Art (پکسل آرٹ)": "pixel art illustration, retro game style, defined pixels",
+                    "Oil Painting (روایتی پینٹنگ)": "oil painting masterpiece, classical canvas texture, rich colors",
+                    "Watercolor (واٹر کلر آرٹ)": "watercolor painting, soft artistic color palette",
+                    "Vaporwave (ویپر ویو سٹائل)": "vaporwave aesthetic, 80s neon style, pastel tones",
+                    "Comic Book (کامک بک سٹائل)": "comic book art, bold outlines, vivid colors",
                 }
 
                 if composition == "Portrait (قریبی شاٹ، پورٹریٹ)":
-                    scene_details = "portrait shot, close-up shot, shallow depth of field, focused on face"
+                    scene_details = "portrait shot, close-up shot, focused face"
                     width, height = 1024, 1024
                 else:
-                    scene_details = "wide angle shot, medium shot, fully showing subject and environment clearly"
+                    scene_details = "wide angle shot, medium shot, full environmental view"
                     width, height = 1280, 720
 
-                # 3. Construct Final optimized prompt
-                enhanced_prompt = f"{scene_details}, {style_enhancers[style]}, {translated_prompt}"
-                encoded_prompt = urllib.parse.quote(enhanced_prompt)
+                # 3. Final Prompt
+                final_prompt = f"{clean_prompt.strip()}, {scene_details}, {style_enhancers[style]}"
+                encoded_prompt = urllib.parse.quote(final_prompt)
 
-                # Fetch Image from Pollinations
+                # Fetch Image from Pollinations API
                 random_seed = random.randint(1, 999999)
                 image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width={width}&height={height}&model=flux&nologo=true&seed={random_seed}"
 
-                response = requests.get(image_url)
-                img = Image.open(io.BytesIO(response.content))
+                response = requests.get(image_url, timeout=45)
 
-                st.image(
-                    img,
-                    caption=f"آپ کی تیار کردہ HD تصویر",
-                    use_container_width=True,
-                )
+                if response.status_code == 200:
+                    img = Image.open(io.BytesIO(response.content))
+                    st.image(
+                        img,
+                        caption="آپ کی تیار کردہ HD تصویر",
+                        use_container_width=True,
+                    )
 
-                buf = io.BytesIO()
-                img.save(buf, format="PNG")
-                byte_im = buf.getvalue()
+                    buf = io.BytesIO()
+                    img.save(buf, format="PNG")
+                    byte_im = buf.getvalue()
 
-                st.download_button(
-                    label="📥 تصویر ڈاؤن لوڈ کریں (Download Image)",
-                    data=byte_im,
-                    file_name="ai_image.png",
-                    mime="image/png",
-                )
+                    st.download_button(
+                        label="📥 تصویر ڈاؤن لوڈ کریں (Download Image)",
+                        data=byte_im,
+                        file_name="ai_image.png",
+                        mime="image/png",
+                    )
+                else:
+                    st.error("تصویر بنانے میں سرور کا مسئلہ آیا، دوبارہ کوشش کریں۔")
 
             except Exception as e:
-                st.error(f"تصویر بنانے میں کوئی مسئلہ پیش آیا: {e}")
+                st.error(f"پروسیسنگ میں مسئلہ آیا: {e}")
     else:
         st.warning("براہِ کرم پہلے تصویر کی کوئی تفصیل درج کریں۔")
