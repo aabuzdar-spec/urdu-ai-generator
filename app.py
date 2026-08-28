@@ -36,7 +36,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.markdown(
-    '<p class="sub-text">کرسپ اور 100% شارپ فوکس کے ساتھ HD تصاویر بنائیں!</p>',
+    '<p class="sub-text">بغیر کسی ایرر کے صاف اور واضح HD تصاویر بنائیں!</p>',
     unsafe_allow_html=True,
 )
 
@@ -48,7 +48,7 @@ user_prompt = st.text_input(
 style = st.selectbox(
     "تصویر کا آرٹ سٹائل منتخب کریں:",
     [
-        "Photorealistic (کرسپ اور صاف فوکس)",
+        "Photorealistic (قدرتی اور صاف منظر)",
         "Digital Art (ڈیجیٹل آرٹ)",
         "3D Pixar Animation (کارٹون سٹائل)",
         "Oil Painting (روایتی پینٹنگ)",
@@ -57,7 +57,7 @@ style = st.selectbox(
 
 if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
     if user_prompt:
-        with st.spinner("بلر ختم کر کے تصویر کو مکمل شارپ کیا جا رہا ہے..."):
+        with st.spinner("تصویر کو الٹرا شیک اور فوکس کیا جا رہا ہے..."):
             try:
                 translated_prompt = GoogleTranslator(
                     source="auto", target="en"
@@ -76,8 +76,9 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                 for word in unwanted_words:
                     clean_prompt = clean_prompt.replace(word, "")
 
+                # Style Enhancers using clear in-prompt commands
                 style_enhancers = {
-                    "Photorealistic (کرسپ اور صاف فوکس)": "realistic photo, highly detailed",
+                    "Photorealistic (قدرتی اور صاف منظر)": "realistic photo, fully focused scene, sharp environment",
                     "Digital Art (ڈیجیٹل آرٹ)": "clean digital art, vivid colors",
                     "3D Pixar Animation (کارٹون سٹائل)": "3d animated style, colorful",
                     "Oil Painting (روایتی پینٹنگ)": "oil painting style, artistic composition",
@@ -91,33 +92,34 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                 random_seed = random.randint(1, 99999)
                 encoded_prompt = urllib.parse.quote(enhanced_prompt)
 
-                # Negative prompt to strictly block blur and bokeh
-                negative_prompt = urllib.parse.quote(
-                    "blur, blurry, out of focus, bokeh, depth of field, hazy, soft focus, blurry background"
-                )
-
-                # API Call with negative prompt and seed optimization
-                image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={random_seed}&negative={negative_prompt}"
+                # Clean URL without broken parameters
+                image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={random_seed}"
 
                 response = requests.get(image_url)
-                img = Image.open(io.BytesIO(response.content))
 
-                st.image(
-                    img,
-                    caption="آپ کی تیار کردہ HD تصویر",
-                    use_container_width=True,
-                )
+                if response.status_code == 200:
+                    img = Image.open(io.BytesIO(response.content))
 
-                buf = io.BytesIO()
-                img.save(buf, format="PNG")
-                byte_im = buf.getvalue()
+                    st.image(
+                        img,
+                        caption="آپ کی تیار کردہ HD تصویر",
+                        use_container_width=True,
+                    )
 
-                st.download_button(
-                    label="📥 تصویر ڈاؤن لوڈ کریں (Download Image)",
-                    data=byte_im,
-                    file_name="ai_image.png",
-                    mime="image/png",
-                )
+                    buf = io.BytesIO()
+                    img.save(buf, format="PNG")
+                    byte_im = buf.getvalue()
+
+                    st.download_button(
+                        label="📥 تصویر ڈاؤن لوڈ کریں (Download Image)",
+                        data=byte_im,
+                        file_name="ai_image.png",
+                        mime="image/png",
+                    )
+                else:
+                    st.error(
+                        "سرور اس وقت مصروف ہے، براہِ کرم دوبارہ بٹن پر کلک کریں۔"
+                    )
 
             except Exception as e:
                 st.error(f"تصویر بنانے میں کوئی مسئلہ پیش آیا: {e}")
