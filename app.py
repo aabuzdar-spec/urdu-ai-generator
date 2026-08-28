@@ -77,7 +77,7 @@ def translate_to_english(text):
 
 user_prompt_urdu = st.text_input(
     "تصویر کی تفصیل (اردو میں لکھیں):",
-    placeholder="مثال: ایک طرف کتا اور دوسری طرف بلی بیٹھی ہے",
+    placeholder="مثال: ایک کتا اور ایک بلی ساتھ بیٹھے ہیں",
 )
 
 # Composition Selector
@@ -126,38 +126,28 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
 
                 final_subject = clean_prompt.strip()
 
-                # Fix for multiple subjects (e.g. dog and cat)
-                if " and " in final_subject or " with " in final_subject:
-                    parts = final_subject.split(" and ") if " and " in final_subject else final_subject.split(" with ")
-                    if len(parts) == 2:
-                        enhanced_subject = f"a distinct {parts[0].strip()} on the left side, and a distinct {parts[1].strip()} on the right side, side-by-side, split composition, two separate animals"
-                    else:
-                        enhanced_subject = f"{final_subject}, multiple distinct subjects, clearly separated"
-                else:
-                    enhanced_subject = final_subject
-
-                st.info(f"🔍 **AI سمجھا:** {enhanced_subject}")
+                st.info(f"🔍 **AI سمجھا:** {final_subject}")
 
                 # 2. Styles Definition
                 style_enhancers = {
-                    "Photorealistic (بالکل اصلی اور شفاف)": "realistic photograph, highly detailed, 8k resolution, crisp focus",
-                    "Pixel Art (پکسل آرٹ)": "pixel art illustration, retro game style, crisp defined pixels, 16-bit graphic style",
-                    "Comic Book (کامک بک سٹائل)": "comic book art style, graphic novel illustration, bold ink outlines, dynamic lighting, vivid comic colors",
-                    "3D Pixar Animation (کارٹون سٹائل)": "3d pixar style animation, vibrant colors, clean render",
-                    "Oil Painting (روایتی پینٹنگ)": "oil painting masterpiece, classical canvas texture, rich colors",
-                    "Watercolor (واٹر کلر آرٹ)": "watercolor painting, soft artistic color palette",
-                    "Vaporwave (ویپر ویو سٹائل)": "vaporwave aesthetic, 80s neon style, pastel tones",
+                    "Photorealistic (بالکل اصلی اور شفاف)": "high quality realistic photo, 8k resolution, natural lighting, highly detailed",
+                    "Pixel Art (پکسل آرٹ)": "pixel art illustration, retro 16-bit game art",
+                    "Comic Book (کامک بک سٹائل)": "comic book illustration, vivid colors, bold lines",
+                    "3D Pixar Animation (کارٹون سٹائل)": "3d pixar style render, cute character design, smooth lighting",
+                    "Oil Painting (روایتی پینٹنگ)": "oil painting, canvas texture, artistic lighting",
+                    "Watercolor (واٹر کلر آرٹ)": "soft watercolor painting",
+                    "Vaporwave (ویپر ویو سٹائل)": "vaporwave aesthetic, neon colors",
                 }
 
                 if composition == "Portrait (قریبی شاٹ، پورٹریٹ)":
-                    scene_details = "close-up shot, detailed focus"
+                    scene_details = "centered composition, detailed shot"
                     width, height = 1024, 1024
                 else:
-                    scene_details = "wide angle shot, medium shot, full view of both subjects side-by-side"
+                    scene_details = "wide scene, full shot showing both subjects"
                     width, height = 1280, 720
 
-                # 3. Final Prompt Assembly
-                final_prompt = f"{enhanced_subject}, {scene_details}, {style_enhancers[style]}"
+                # 3. Clean Natural Prompt Assembly
+                final_prompt = f"{final_subject}, {scene_details}, {style_enhancers[style]}"
                 encoded_prompt = urllib.parse.quote(final_prompt)
 
                 # Fetch Image
