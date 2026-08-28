@@ -126,7 +126,7 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
 
                 final_subject = clean_prompt.strip()
 
-                st.info(f"🔍 **AI سمجھا:** {final_subject}")
+                st.info(f"🔍 **AI Translation:** {final_subject}")
 
                 # 2. Styles Definition
                 style_enhancers = {
