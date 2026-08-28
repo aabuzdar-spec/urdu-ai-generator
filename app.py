@@ -10,7 +10,7 @@ st.set_page_config(
     page_title="Urdu AI Studio Pro", page_icon="🎨", layout="centered"
 )
 
-# Custom CSS
+# Custom CSS Styles
 st.markdown(
     """
     <style>
@@ -36,19 +36,19 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.markdown(
-    '<p class="sub-text">بغیر کسی ایرر کے صاف اور واضح HD تصاویر بنائیں!</p>',
+    '<p class="sub-text">مکمل شارپ فوکس اور درست سبجیکٹ کے ساتھ HD تصاویر بنائیں!</p>',
     unsafe_allow_html=True,
 )
 
 user_prompt = st.text_input(
     "تصویر کی تفصیل (Urdu / English):",
-    placeholder="مثال: ایک عورت اور ایک بلی ایک ساتھ بیٹھے ہیں",
+    placeholder="مثال: ایک عورت اپنے کتے کے ساتھ پارک میں بیٹھی ہے",
 )
 
 style = st.selectbox(
     "تصویر کا آرٹ سٹائل منتخب کریں:",
     [
-        "Photorealistic (قدرتی اور صاف منظر)",
+        "Ultra Sharp Photo (مکمل صاف اور واضح فوکس)",
         "Digital Art (ڈیجیٹل آرٹ)",
         "3D Pixar Animation (کارٹون سٹائل)",
         "Oil Painting (روایتی پینٹنگ)",
@@ -57,12 +57,16 @@ style = st.selectbox(
 
 if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
     if user_prompt:
-        with st.spinner("تصویر کو الٹرا شیک اور فوکس کیا جا رہا ہے..."):
+        with st.spinner(
+            "تصویر پروسیس ہو رہی ہے، تمام کریکٹرز کو واضح کیا جا رہا ہے..."
+        ):
             try:
+                # 1. Translate User Input
                 translated_prompt = GoogleTranslator(
                     source="auto", target="en"
                 ).translate(user_prompt)
 
+                # Clean basic filler words that mess up AI focus
                 unwanted_words = [
                     "picture of",
                     "image of",
@@ -76,26 +80,27 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                 for word in unwanted_words:
                     clean_prompt = clean_prompt.replace(word, "")
 
-                # Style Enhancers using clear in-prompt commands
+                # 2. Advanced Photography Keywords to force ZERO BLUR & DEEP FOCUS
                 style_enhancers = {
-                    "Photorealistic (قدرتی اور صاف منظر)": "realistic photo, fully focused scene, sharp environment",
-                    "Digital Art (ڈیجیٹل آرٹ)": "clean digital art, vivid colors",
-                    "3D Pixar Animation (کارٹون سٹائل)": "3d animated style, colorful",
-                    "Oil Painting (روایتی پینٹنگ)": "oil painting style, artistic composition",
+                    "Ultra Sharp Photo (مکمل صاف اور واضح فوکس)": "tack sharp, deep focus, hyperfocal distance, sharp subject and clear background, 8k resolution photo",
+                    "Digital Art (ڈیجیٹل آرٹ)": "clean vector digital art, vivid colors, fully sharp illustration",
+                    "3D Pixar Animation (کارٹون سٹائل)": "3d animated style, clear characters, crisp details, vivid rendering",
+                    "Oil Painting (روایتی پینٹنگ)": "masterpiece oil painting, clear artwork composition",
                 }
 
-                enhanced_prompt = (
+                # Construct final prompt (Subject Priority)
+                final_prompt = (
                     f"{clean_prompt.strip()}, {style_enhancers[style]}"
                 )
-                st.info(f"🔍 **Prompt:** {enhanced_prompt}")
+                st.info(f"🔍 **Optimized AI Prompt:** {final_prompt}")
 
-                random_seed = random.randint(1, 99999)
-                encoded_prompt = urllib.parse.quote(enhanced_prompt)
+                random_seed = random.randint(1, 999999)
+                encoded_prompt = urllib.parse.quote(final_prompt)
 
-                # Clean URL without broken parameters
-                image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={random_seed}"
+                # 3. Enhanced API Call with URL Parameters: &enhance=true forces AI to adhere to exact prompt
+                image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={random_seed}&enhance=true"
 
-                response = requests.get(image_url)
+                response = requests.get(image_url, timeout=30)
 
                 if response.status_code == 200:
                     img = Image.open(io.BytesIO(response.content))
@@ -118,10 +123,10 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                     )
                 else:
                     st.error(
-                        "سرور اس وقت مصروف ہے، براہِ کرم دوبارہ بٹن پر کلک کریں۔"
+                        "سرور سے جواب موصول نہیں ہوا۔ براہ کرم دوبارہ کوشش کریں۔"
                     )
 
             except Exception as e:
-                st.error(f"تصویر بنانے میں کوئی مسئلہ پیش آیا: {e}")
+                st.error(f"تصویر بنانے میں مسئلہ پیش آیا: {e}")
     else:
         st.warning("براہِ کرم پہلے تصویر کی کوئی تفصیل درج کریں۔")
