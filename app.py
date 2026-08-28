@@ -1,16 +1,31 @@
 import io
-import json
 import random
 import urllib.parse
 from PIL import Image
 import requests
 import streamlit as st
 
+# Function to translate Urdu to English using a public API
+def translate_urdu_to_english(text):
+    if not text:
+        return ""
+    # Try a free translation API (this is a basic method, for heavy use a paid API is better)
+    url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=ur&tl=en&dt=t&q={urllib.parse.quote(text)}"
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            result = response.json()
+            return result[0][0][0]  # The translated text
+        else:
+            return text # Fallback to original text if API fails
+    except Exception as e:
+        return text # Fallback to original text if there's an error
+
 st.set_page_config(
     page_title="Urdu AI Studio Pro", page_icon="🎨", layout="centered"
 )
 
-# Custom CSS Styles (Improved layout)
+# Custom CSS
 st.markdown(
     """
     <style>
@@ -18,13 +33,13 @@ st.markdown(
     .main-header {
         background: linear-gradient(90deg, #ec4899 0%, #8b5cf6 50%, #3b82f6 100%);
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        text-align: center; font-weight: 800; font-size: 3.2rem; margin-bottom: 5px;
+        text-align: center; font-weight: 800; font-size: 2.8rem; margin-bottom: 5px;
     }
-    .sub-text { text-align: center; color: #cbd5e1; font-size: 1.3rem; margin-bottom: 30px; }
+    .sub-text { text-align: center; color: #cbd5e1; font-size: 1.1rem; margin-bottom: 25px; }
     .stTextInput > div > div > input { border-radius: 12px; border: 2px solid #6366f1; background-color: #1e293b; color: #ffffff; font-size: 1.1rem; }
     .stButton > button {
         width: 100%; background: linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
-        color: white; border: none; padding: 14px 28px; font-size: 1.3rem; font-weight: bold; border-radius: 12px;
+        color: white; border: none; padding: 12px 24px; font-size: 1.2rem; font-weight: bold; border-radius: 12px;
     }
     </style>
 """,
@@ -36,118 +51,74 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.markdown(
-    '<p class="sub-text">بغیر کسی ایرر کے 100% پرفیکٹ، مکمل منظر یا پورٹریٹ، آپ کی مرضی کی تصاویر بنائیں!</p>',
+    '<p class="sub-text">اپنی پسندیدہ چیزیں اب اردو میں لکھیں، ہم بنائیں گے HD تصاویر!</p>',
     unsafe_allow_html=True,
 )
 
-
-# Robust Urdu Translation Function
-def safe_translate(text):
-    try:
-        url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q={urllib.parse.quote(text)}"
-        res = requests.get(url, timeout=10)
-        if res.status_code == 200:
-            result = res.json()
-            translated = result[0][0][0]
-            if "error" not in translated.lower():
-                return translated
-    except Exception:
-        pass
-    return text
-
-
-user_prompt = st.text_input(
-    "تصویر کی تفصیل (Urdu / English):",
-    placeholder="مثال: ایک آدمی ہوا میں اڑ رہا ہے",
+user_prompt_urdu = st.text_input(
+    "تصویر کی تفصیل (اردو میں لکھیں):",
+    placeholder="مثال: ایک برفانی ریچھ بناؤ",
 )
 
-# New Feature: Let user choose the composition (Full Scene or Portrait)
+# Composition Selector
 composition = st.radio(
-    "تصویر کی ساخت (Composition) منتخب کریں:",
+    "تصویر کی ساخت منتخب کریں:",
     [
-        "Full Scene (مکمل منظر، وائڈ شارٹ)",
-        "Portrait (قریبی شاٹ، پورٹریٹ)",
-    ],
-)
-
-style = st.selectbox(
-    "تصویر کا آرٹ سٹائل منتخب کریں:",
-    [
-        "Photorealistic (بالکل اصلی اور شفاف)",
-        "3D Animation (کارٹون سٹائل)",
-        "Digital Painting (ڈیجیٹل آرٹ)",
-        "Oil Painting (روایتی پینٹنگ)",
+        "Portrait (پورٹریٹ شاٹ)",
+        "Wide Shot (وائڈ سین، مکمل منظر)",
     ],
 )
 
 if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
-    if user_prompt:
-        with st.spinner("تیزی سے تصویر پروسیس کی جا رہی ہے..."):
+    if user_prompt_urdu:
+        with st.spinner("تصویر تیار کی جا رہی ہے..."):
             try:
-                translated_prompt = safe_translate(user_prompt)
+                # 1. Translate Urdu to English Automatically
+                translated_prompt = translate_urdu_to_english(user_prompt_urdu)
+                st.info(f"🔍 **AI سمجھا:** {translated_prompt}")
 
-                unwanted_words = [
-                    "picture of", "image of", "draw a", "make a",
-                    "photo of", "ki tasveer", "tasveer banao", "banao",
-                ]
-                clean_prompt = translated_prompt.lower()
-                for word in unwanted_words:
-                    clean_prompt = clean_prompt.replace(word, "")
-
-                # 1. Base style prompts
-                style_enhancers = {
-                    "Photorealistic (بالکل اصلی اور شفاف)": "realistic photograph, highly detailed, crisp focus, 8k resolution, sharp subject",
-                    "3D Animation (کارٹون سٹائل)": "3d animated style, vibrant colorful scene, clear rendering, highly detailed",
-                    "Digital Painting (ڈیجیٹل آرٹ)": "clean digital art painting, crisp lines, clean colors, high resolution",
-                    "Oil Painting (روایتی پینٹنگ)": "oil painting masterpiece, classical art style, deep texture, rich colors, fully focused composition",
-                }
-
-                # 2. Add composition words
-                # These words are used to guide AI, not block words
-                if composition == "Full Scene (مکمل منظر، وائڈ شارٹ)":
-                    scene_prompt = f"environmental portrait, wide angle shot, full shot showing whole scene and surroundings, {style_enhancers[style]}"
+                # 2. Composition Enhancer
+                if composition == "Portrait (پورٹریٹ شاٹ)":
+                    scene_details = "portrait shot, large head and shoulders, close-up shot, shallow depth of field, focused on face"
                 else:
-                    scene_prompt = f"portrait shot, large head and shoulders, close-up shot, shallow depth of field, focused on face, {style_enhancers[style]}"
+                    scene_details = "wide shot, medium shot, environmental scene, fully showing subject clearly"
 
-                # Final prompt composition, prioritizing user prompt
-                final_prompt = (
-                    f"{clean_prompt.strip()}, {scene_prompt}"
+                # Style Enhancer
+                style_enhancer = "realistic photograph, highly detailed, crisp focus, 8k resolution, sharp subject"
+
+                # 3. Construct Final optimized prompt
+                enhanced_prompt = f"{scene_details}, {style_enhancer}, {translated_prompt}"
+                encoded_prompt = urllib.parse.quote(enhanced_prompt)
+
+                # Fetch Image from Pollinations
+                random_seed = random.randint(1, 99999)
+                # Ensure width and height are appropriate for composition
+                if composition == "Portrait (پورٹریٹ شاٹ)":
+                     image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true&seed={random_seed}"
+                else:
+                     image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1280&height=720&model=flux&nologo=true&seed={random_seed}"
+
+                response = requests.get(image_url)
+                img = Image.open(io.BytesIO(response.content))
+
+                st.image(
+                    img,
+                    caption=f"آپ کی تیار کردہ HD تصویر",
+                    use_container_width=True,
                 )
-                st.info(f"🔍 **Optimized AI Prompt:** {final_prompt}")
 
-                # 3. Direct Image Generation
-                random_seed = random.randint(1, 999999)
-                encoded = urllib.parse.quote(final_prompt)
+                buf = io.BytesIO()
+                img.save(buf, format="PNG")
+                byte_im = buf.getvalue()
 
-                # Adjusted width and height for a more standard aspect ratio
-                img_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024&model=flux&nologo=true&seed={random_seed}"
-
-                response = requests.get(img_url, timeout=45)
-
-                if response.status_code == 200:
-                    img = Image.open(io.BytesIO(response.content))
-                    st.image(
-                        img,
-                        caption="آپ کی تیار کردہ HD تصویر",
-                        use_container_width=True,
-                    )
-
-                    buf = io.BytesIO()
-                    img.save(buf, format="PNG")
-                    byte_im = buf.getvalue()
-
-                    st.download_button(
-                        label="📥 تصویر ڈاؤن لوڈ کریں (Download Image)",
-                        data=byte_im,
-                        file_name="ai_image.png",
-                        mime="image/png",
-                    )
-                else:
-                    st.error(
-                        "سرور اس وقت مصروف ہے، براہ کرم 5 سیکنڈ بعد دوبارہ کوشش کریں۔"
-                    )
+                st.download_button(
+                    label="📥 تصویر ڈاؤن لوڈ کریں (Download Image)",
+                    data=byte_im,
+                    file_name="ai_image.png",
+                    mime="image/png",
+                )
 
             except Exception as e:
-                st.error(f"پروسیسنگ میں مسئلہ آیا: {e}")
+                st.error(f"تصویر بنانے میں کوئی مسئلہ پیش آیا: {e}")
     else:
         st.warning("براہِ کرم پہلے تصویر کی کوئی تفصیل درج کریں۔")
