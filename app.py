@@ -1,16 +1,16 @@
 import io
-import json
 import random
 import urllib.parse
 from PIL import Image
 import requests
 import streamlit as st
+from deep_translator import GoogleTranslator  # Robust translator library
 
 st.set_page_config(
     page_title="Urdu AI Studio Pro", page_icon="🎨", layout="centered"
 )
 
-# Custom CSS Styles
+# Custom CSS
 st.markdown(
     """
     <style>
@@ -41,16 +41,12 @@ st.markdown(
 )
 
 
-# Reliable Translation without extra packages
-def translate_urdu(text):
+# Reliable Urdu to English translation
+def safe_translate_urdu(text):
     try:
-        url = "https://translate.googleapis.com/translate_a/single"
-        params = {"client": "gtx", "sl": "ur", "tl": "en", "dt": "t", "q": text}
-        res = requests.get(url, params=params, timeout=10)
-        if res.status_code == 200:
-            data = res.json()
-            # Extract clean translated text
-            return "".join([item[0] for item in data[0] if item[0]])
+        translated = GoogleTranslator(source="ur", target="en").translate(text)
+        if translated and translated.strip():
+            return translated
     except Exception:
         pass
     return text
@@ -70,7 +66,7 @@ composition = st.radio(
     ],
 )
 
-# Restored all style options
+# Style Selector
 style = st.selectbox(
     "تصویر کا آرٹ سٹائل منتخب کریں:",
     [
@@ -89,15 +85,16 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
         with st.spinner("تصویر تیار کی جا رہی ہے..."):
             try:
                 # 1. Translate Urdu Prompt to English
-                translated_prompt = translate_urdu(user_prompt_urdu)
+                translated_prompt = safe_translate_urdu(user_prompt_urdu)
 
-                # Remove extra command words in English
+                # Remove extra noise words
                 unwanted_words = [
                     "make a",
                     "draw a",
                     "create a",
                     "picture of",
                     "image of",
+                    "banao",
                 ]
                 clean_prompt = translated_prompt.lower()
                 for w in unwanted_words:
@@ -107,7 +104,7 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
 
                 # 2. Add style and composition enhancers
                 style_enhancers = {
-                    "Photorealistic (بالکل اصلی اور شفاف)": "photograph, realistic, highly detailed, 8k resolution, sharp focus",
+                    "Photorealistic (بالکل اصلی اور شفاف)": "realistic photograph, highly detailed, 8k resolution, crisp focus",
                     "3D Pixar Animation (کارٹون سٹائل)": "3d pixar style animation, vibrant colors, clean render",
                     "Pixel Art (پکسل آرٹ)": "pixel art illustration, retro game style, defined pixels",
                     "Oil Painting (روایتی پینٹنگ)": "oil painting masterpiece, classical canvas texture, rich colors",
@@ -117,7 +114,7 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                 }
 
                 if composition == "Portrait (قریبی شاٹ، پورٹریٹ)":
-                    scene_details = "portrait shot, close-up shot, focused face"
+                    scene_details = "portrait shot, close-up shot, detailed focus"
                     width, height = 1024, 1024
                 else:
                     scene_details = "wide angle shot, medium shot, full environmental view"
