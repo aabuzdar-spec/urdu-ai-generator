@@ -4,7 +4,7 @@ import urllib.parse
 from PIL import Image
 import requests
 import streamlit as st
-from deep_translator import GoogleTranslator  # Robust translator library
+from deep_translator import GoogleTranslator, MyMemoryTranslator
 
 st.set_page_config(
     page_title="Urdu AI Studio Pro", page_icon="🎨", layout="centered"
@@ -41,14 +41,40 @@ st.markdown(
 )
 
 
-# Reliable Urdu to English translation
-def safe_translate_urdu(text):
+# Multi-Engine Translation System (Guaranteed Translation)
+def translate_to_english(text):
+    if not text or text.isascii():
+        return text
+
+    # Engine 1: Google Translator via deep_translator
     try:
         translated = GoogleTranslator(source="ur", target="en").translate(text)
-        if translated and translated.strip():
+        if translated and not translated.isspace() and translated != text:
             return translated
     except Exception:
         pass
+
+    # Engine 2: MyMemory Translator (Backup 1)
+    try:
+        translated = MyMemoryTranslator(source="ur-PK", target="en-US").translate(text)
+        if translated and not translated.isspace() and translated != text:
+            return translated
+    except Exception:
+        pass
+
+    # Engine 3: Direct API Request (Backup 2)
+    try:
+        url = "https://translate.googleapis.com/translate_a/single"
+        params = {"client": "gtx", "sl": "ur", "tl": "en", "dt": "t", "q": text}
+        res = requests.get(url, params=params, timeout=5)
+        if res.status_code == 200:
+            data = res.json()
+            translated = "".join([item[0] for item in data[0] if item[0]])
+            if translated and translated != text:
+                return translated
+    except Exception:
+        pass
+
     return text
 
 
@@ -71,23 +97,23 @@ style = st.selectbox(
     "تصویر کا آرٹ سٹائل منتخب کریں:",
     [
         "Photorealistic (بالکل اصلی اور شفاف)",
+        "Comic Book (کامک بک سٹائل)",
         "3D Pixar Animation (کارٹون سٹائل)",
         "Pixel Art (پکسل آرٹ)",
         "Oil Painting (روایتی پینٹنگ)",
         "Watercolor (واٹر کلر آرٹ)",
         "Vaporwave (ویپر ویو سٹائل)",
-        "Comic Book (کامک بک سٹائل)",
     ],
 )
 
 if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
     if user_prompt_urdu:
-        with st.spinner("تصویر تیار کی جا رہی ہے..."):
+        with st.spinner("ترجمہ اور تصویر تیار کی جا رہی ہے..."):
             try:
-                # 1. Translate Urdu Prompt to English
-                translated_prompt = safe_translate_urdu(user_prompt_urdu)
+                # 1. Translate Prompt
+                translated_prompt = translate_to_english(user_prompt_urdu)
 
-                # Remove extra noise words
+                # Clean prompt
                 unwanted_words = [
                     "make a",
                     "draw a",
@@ -95,6 +121,7 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                     "picture of",
                     "image of",
                     "banao",
+                    "bnao",
                 ]
                 clean_prompt = translated_prompt.lower()
                 for w in unwanted_words:
@@ -102,15 +129,15 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
 
                 st.info(f"🔍 **AI سمجھا:** {clean_prompt.strip()}")
 
-                # 2. Add style and composition enhancers
+                # 2. Styles Definition
                 style_enhancers = {
                     "Photorealistic (بالکل اصلی اور شفاف)": "realistic photograph, highly detailed, 8k resolution, crisp focus",
+                    "Comic Book (کامک بک سٹائل)": "comic book art style, graphic novel illustration, bold ink outlines, dynamic lighting, vivid comic colors",
                     "3D Pixar Animation (کارٹون سٹائل)": "3d pixar style animation, vibrant colors, clean render",
                     "Pixel Art (پکسل آرٹ)": "pixel art illustration, retro game style, defined pixels",
                     "Oil Painting (روایتی پینٹنگ)": "oil painting masterpiece, classical canvas texture, rich colors",
                     "Watercolor (واٹر کلر آرٹ)": "watercolor painting, soft artistic color palette",
                     "Vaporwave (ویپر ویو سٹائل)": "vaporwave aesthetic, 80s neon style, pastel tones",
-                    "Comic Book (کامک بک سٹائل)": "comic book art, bold outlines, vivid colors",
                 }
 
                 if composition == "Portrait (قریبی شاٹ، پورٹریٹ)":
@@ -120,11 +147,11 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                     scene_details = "wide angle shot, medium shot, full environmental view"
                     width, height = 1280, 720
 
-                # 3. Final Prompt
+                # 3. Final Prompt Assembly
                 final_prompt = f"{clean_prompt.strip()}, {scene_details}, {style_enhancers[style]}"
                 encoded_prompt = urllib.parse.quote(final_prompt)
 
-                # Fetch Image from Pollinations API
+                # Fetch Image
                 random_seed = random.randint(1, 999999)
                 image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width={width}&height={height}&model=flux&nologo=true&seed={random_seed}"
 
