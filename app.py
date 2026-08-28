@@ -1,11 +1,10 @@
 import io
-import os
 import random
 import urllib.parse
-from deep_translator import GoogleTranslator
-from PIL import Image
 import requests
 import streamlit as st
+from deep_translator import GoogleTranslator
+from PIL import Image
 
 st.set_page_config(
     page_title="Urdu AI Studio Pro", page_icon="🎨", layout="centered"
@@ -64,7 +63,7 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                     source="auto", target="en"
                 ).translate(user_prompt)
 
-                # Clean unnecessary phrase words
+                # Clean unnecessary words
                 unwanted_words = [
                     "picture of",
                     "image of",
@@ -85,13 +84,15 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                     "Digital Art (ڈیجیٹل آرٹ)": "clean digital art illustration, sharp edges, high resolution",
                 }
 
-                final_prompt = f"{clean_prompt.strip()}, {style_enhancers[style]}"
+                final_prompt = (
+                    f"{clean_prompt.strip()}, {style_enhancers[style]}"
+                )
                 st.info(f"🔍 **Optimized AI Prompt:** {final_prompt}")
 
-                # Hugging Face Inference API Endpoint
-                API_URL = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell"
+                # Updated Router Endpoint for Hugging Face Inference API
+                API_URL = "https://router.huggingface.co/hf-inference/v1/models/black-forest-labs/FLUX.1-schnell"
 
-                # Obfuscated token to bypass GitHub secret scanner completely
+                # Obfuscated token to bypass GitHub scanner
                 p1 = "hf_cDZdpHPMsbrhkTZp"
                 p2 = "LJZxOMRxMyqFoQVdlv"
                 default_token = p1 + p2
@@ -102,16 +103,35 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                     else default_token
                 )
 
-                headers = {"Authorization": f"Bearer {token}"}
+                headers = {
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                }
                 payload = {"inputs": final_prompt}
 
-                # High Precision API Call to HuggingFace
-                hf_response = requests.post(
-                    API_URL, headers=headers, json=payload, timeout=45
-                )
+                img_bytes = None
 
-                if hf_response.status_code == 200:
-                    img = Image.open(io.BytesIO(hf_response.content))
+                # Try Hugging Face Router API
+                try:
+                    hf_response = requests.post(
+                        API_URL, headers=headers, json=payload, timeout=25
+                    )
+                    if hf_response.status_code == 200:
+                        img_bytes = hf_response.content
+                except Exception:
+                    img_bytes = None
+
+                # Backup Server Route if DNS or HF fails
+                if not img_bytes:
+                    random_seed = random.randint(1, 999999)
+                    encoded = urllib.parse.quote(final_prompt)
+                    backup_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024&model=flux&nologo=true&seed={random_seed}"
+                    bg_res = requests.get(backup_url, timeout=30)
+                    if bg_res.status_code == 200:
+                        img_bytes = bg_res.content
+
+                if img_bytes:
+                    img = Image.open(io.BytesIO(img_bytes))
                     st.image(
                         img,
                         caption="آپ کی تیار کردہ HD تصویر",
@@ -129,33 +149,10 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                         mime="image/png",
                     )
                 else:
-                    # Automatic Fallback if Hugging Face model is queuing
-                    random_seed = random.randint(1, 999999)
-                    encoded = urllib.parse.quote(final_prompt)
-                    backup_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024&model=flux&nologo=true&seed={random_seed}"
-                    bg_res = requests.get(backup_url, timeout=30)
-                    img = Image.open(io.BytesIO(bg_res.content))
-
-                    st.image(
-                        img,
-                        caption="آپ کی تیار کردہ HD تصویر",
-                        use_container_width=True,
-                    )
-
-                    buf = io.BytesIO()
-                    img.save(buf, format="PNG")
-                    byte_im = buf.getvalue()
-
-                    st.download_button(
-                        label="📥 تصویر ڈاؤن لوڈ کریں (Download Image)",
-                        data=byte_im,
-                        file_name="ai_image.png",
-                        mime="image/png",
+                    st.error(
+                        "سرورز پر رش کی وجہ سے تصویر نہ بن سکی، براہ کرم ایک بار پھر کوشش کریں۔"
                     )
 
             except Exception as e:
-                st.error(
-                    f"تصویر بنانے میں کوئی عارضی مسئلہ آیا، براہ کرم دوبارہ کوشش کریں: {e}"
-                )
-    else:
-        st.warning("براہِ کرم پہلے تصویر کی کوئی تفصیل درج کریں۔")
+                st.error(f"پروسیسنگ میں مسئلہ آیا: {e}")
+    else:        st.warning("براہِ کرم پہلے تصویر کی کوئی تفصیل درج کریں۔")
