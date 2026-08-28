@@ -41,12 +41,11 @@ st.markdown(
 )
 
 
-# Multi-Engine Translation System (Guaranteed Translation)
+# Multi-Engine Translation System
 def translate_to_english(text):
     if not text or text.isascii():
         return text
 
-    # Engine 1: Google Translator via deep_translator
     try:
         translated = GoogleTranslator(source="ur", target="en").translate(text)
         if translated and not translated.isspace() and translated != text:
@@ -54,7 +53,6 @@ def translate_to_english(text):
     except Exception:
         pass
 
-    # Engine 2: MyMemory Translator (Backup 1)
     try:
         translated = MyMemoryTranslator(source="ur-PK", target="en-US").translate(text)
         if translated and not translated.isspace() and translated != text:
@@ -62,7 +60,6 @@ def translate_to_english(text):
     except Exception:
         pass
 
-    # Engine 3: Direct API Request (Backup 2)
     try:
         url = "https://translate.googleapis.com/translate_a/single"
         params = {"client": "gtx", "sl": "ur", "tl": "en", "dt": "t", "q": text}
@@ -80,15 +77,15 @@ def translate_to_english(text):
 
 user_prompt_urdu = st.text_input(
     "تصویر کی تفصیل (اردو میں لکھیں):",
-    placeholder="مثال: ایک کتا بائیں طرف اور ایک بلی دائیں طرف بیٹھی ہے",
+    placeholder="مثال: ایک طرف کتا اور دوسری طرف بلی بیٹھی ہے",
 )
 
 # Composition Selector
 composition = st.radio(
     "تصویر کی ساخت (Composition) منتخب کریں:",
     [
-        "Portrait (قریبی شاٹ، پورٹریٹ)",
         "Wide Shot (مکمل منظر، وائڈ سین)",
+        "Portrait (قریبی شاٹ، پورٹریٹ)",
     ],
 )
 
@@ -97,9 +94,9 @@ style = st.selectbox(
     "تصویر کا آرٹ سٹائل منتخب کریں:",
     [
         "Photorealistic (بالکل اصلی اور شفاف)",
+        "Pixel Art (پکسل آرٹ)",
         "Comic Book (کامک بک سٹائل)",
         "3D Pixar Animation (کارٹون سٹائل)",
-        "Pixel Art (پکسل آرٹ)",
         "Oil Painting (روایتی پینٹنگ)",
         "Watercolor (واٹر کلر آرٹ)",
         "Vaporwave (ویپر ویو سٹائل)",
@@ -128,28 +125,39 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                     clean_prompt = clean_prompt.replace(w, "")
 
                 final_subject = clean_prompt.strip()
-                st.info(f"🔍 **AI سمجھا:** {final_subject}")
+
+                # Fix for multiple subjects (e.g. dog and cat)
+                if " and " in final_subject or " with " in final_subject:
+                    parts = final_subject.split(" and ") if " and " in final_subject else final_subject.split(" with ")
+                    if len(parts) == 2:
+                        enhanced_subject = f"a distinct {parts[0].strip()} on the left side, and a distinct {parts[1].strip()} on the right side, side-by-side, split composition, two separate animals"
+                    else:
+                        enhanced_subject = f"{final_subject}, multiple distinct subjects, clearly separated"
+                else:
+                    enhanced_subject = final_subject
+
+                st.info(f"🔍 **AI سمجھا:** {enhanced_subject}")
 
                 # 2. Styles Definition
                 style_enhancers = {
-                    "Photorealistic (بالکل اصلی اور شفاف)": "photograph, highly detailed, 8k resolution, crisp focus, clear separation of subjects",
+                    "Photorealistic (بالکل اصلی اور شفاف)": "realistic photograph, highly detailed, 8k resolution, crisp focus",
+                    "Pixel Art (پکسل آرٹ)": "pixel art illustration, retro game style, crisp defined pixels, 16-bit graphic style",
                     "Comic Book (کامک بک سٹائل)": "comic book art style, graphic novel illustration, bold ink outlines, dynamic lighting, vivid comic colors",
                     "3D Pixar Animation (کارٹون سٹائل)": "3d pixar style animation, vibrant colors, clean render",
-                    "Pixel Art (پکسل آرٹ)": "pixel art illustration, retro game style, defined pixels",
                     "Oil Painting (روایتی پینٹنگ)": "oil painting masterpiece, classical canvas texture, rich colors",
                     "Watercolor (واٹر کلر آرٹ)": "watercolor painting, soft artistic color palette",
                     "Vaporwave (ویپر ویو سٹائل)": "vaporwave aesthetic, 80s neon style, pastel tones",
                 }
 
                 if composition == "Portrait (قریبی شاٹ، پورٹریٹ)":
-                    scene_details = "portrait shot, close-up shot, detailed focus"
+                    scene_details = "close-up shot, detailed focus"
                     width, height = 1024, 1024
                 else:
-                    scene_details = "wide angle shot, medium shot, full environmental view"
+                    scene_details = "wide angle shot, medium shot, full view of both subjects side-by-side"
                     width, height = 1280, 720
 
-                # 3. Final Prompt Assembly with Subject Clarity
-                final_prompt = f"a detailed depiction of {final_subject}, distinct and clearly separated subjects, {scene_details}, {style_enhancers[style]}"
+                # 3. Final Prompt Assembly
+                final_prompt = f"{enhanced_subject}, {scene_details}, {style_enhancers[style]}"
                 encoded_prompt = urllib.parse.quote(final_prompt)
 
                 # Fetch Image
