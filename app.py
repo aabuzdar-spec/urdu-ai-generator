@@ -1,10 +1,10 @@
 import io
+import json
 import random
 import urllib.parse
+from PIL import Image
 import requests
 import streamlit as st
-from deep_translator import GoogleTranslator
-from PIL import Image
 
 st.set_page_config(
     page_title="Urdu AI Studio Pro", page_icon="🎨", layout="centered"
@@ -40,9 +40,26 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+
+# Robust Urdu Translation Function (Bypasses Deep Translator Errors)
+def safe_translate(text):
+    try:
+        url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q={urllib.parse.quote(text)}"
+        res = requests.get(url, timeout=10)
+        if res.status_code == 200:
+            result = res.json()
+            translated = result[0][0][0]
+            # Verify if translation isn't an error message
+            if "error" not in translated.lower():
+                return translated
+    except Exception:
+        pass
+    return text  # Fallback to original input if translation fails
+
+
 user_prompt = st.text_input(
     "تصویر کی تفصیل (Urdu / English):",
-    placeholder="مثال: ایک آدمی روڈ پر دوڑ رہا ہے",
+    placeholder="مثال: ایک آدمی ہوا میں اڑ رہا ہے",
 )
 
 style = st.selectbox(
@@ -58,12 +75,10 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
     if user_prompt:
         with st.spinner("تیزی سے تصویر پروسیس کی جا رہی ہے..."):
             try:
-                # 1. Urdu to English translation
-                translated_prompt = GoogleTranslator(
-                    source="auto", target="en"
-                ).translate(user_prompt)
+                # 1. Clean and Safe Translation
+                translated_prompt = safe_translate(user_prompt)
 
-                # Clean unnecessary words
+                # Remove filler noise
                 unwanted_words = [
                     "picture of",
                     "image of",
@@ -72,14 +87,15 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                     "photo of",
                     "ki tasveer",
                     "tasveer banao",
+                    "banao",
                 ]
                 clean_prompt = translated_prompt.lower()
                 for word in unwanted_words:
                     clean_prompt = clean_prompt.replace(word, "")
 
-                # 2. Style Prompts optimized for FLUX model
+                # 2. Optimized Prompt Architecture
                 style_enhancers = {
-                    "Photorealistic (بالکل اصلی اور شفاف)": "realistic photograph, highly detailed, crisp focus, 8k resolution, sharp subject",
+                    "Photorealistic (بالکل اصلی اور شفاف)": "photograph, highly detailed, sharp focus, 8k resolution, crisp subject",
                     "3D Pixar Animation (کارٹون سٹائل)": "3d pixar style animation, vibrant colors, clear rendering",
                     "Digital Art (ڈیجیٹل آرٹ)": "clean digital art illustration, sharp edges, high resolution",
                 }
@@ -89,49 +105,17 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                 )
                 st.info(f"🔍 **Optimized AI Prompt:** {final_prompt}")
 
-                # Updated Router Endpoint for Hugging Face Inference API
-                API_URL = "https://router.huggingface.co/hf-inference/v1/models/black-forest-labs/FLUX.1-schnell"
+                # 3. Direct Image Generation
+                random_seed = random.randint(1, 999999)
+                encoded = urllib.parse.quote(final_prompt)
 
-                # Obfuscated token to bypass GitHub scanner
-                p1 = "hf_cDZdpHPMsbrhkTZp"
-                p2 = "LJZxOMRxMyqFoQVdlv"
-                default_token = p1 + p2
+                # Using stable Pollinations Flux without broken parameters
+                img_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024&model=flux&nologo=true&seed={random_seed}"
 
-                token = (
-                    st.secrets.get("HF_TOKEN", default_token)
-                    if hasattr(st, "secrets")
-                    else default_token
-                )
+                response = requests.get(img_url, timeout=45)
 
-                headers = {
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json",
-                }
-                payload = {"inputs": final_prompt}
-
-                img_bytes = None
-
-                # Try Hugging Face Router API
-                try:
-                    hf_response = requests.post(
-                        API_URL, headers=headers, json=payload, timeout=25
-                    )
-                    if hf_response.status_code == 200:
-                        img_bytes = hf_response.content
-                except Exception:
-                    img_bytes = None
-
-                # Backup Server Route if DNS or HF fails
-                if not img_bytes:
-                    random_seed = random.randint(1, 999999)
-                    encoded = urllib.parse.quote(final_prompt)
-                    backup_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024&model=flux&nologo=true&seed={random_seed}"
-                    bg_res = requests.get(backup_url, timeout=30)
-                    if bg_res.status_code == 200:
-                        img_bytes = bg_res.content
-
-                if img_bytes:
-                    img = Image.open(io.BytesIO(img_bytes))
+                if response.status_code == 200:
+                    img = Image.open(io.BytesIO(response.content))
                     st.image(
                         img,
                         caption="آپ کی تیار کردہ HD تصویر",
@@ -150,9 +134,10 @@ if st.button("✨ HD تصویر تیار کریں (Generate Image)"):
                     )
                 else:
                     st.error(
-                        "سرورز پر رش کی وجہ سے تصویر نہ بن سکی، براہ کرم ایک بار پھر کوشش کریں۔"
+                        "سرور اس وقت مصروف ہے، براہ کرم 5 سیکنڈ بعد دوبارہ کوشش کریں۔"
                     )
 
             except Exception as e:
                 st.error(f"پروسیسنگ میں مسئلہ آیا: {e}")
-    else:        st.warning("براہِ کرم پہلے تصویر کی کوئی تفصیل درج کریں۔")
+    else:
+        st.warning("براہِ کرم پہلے تصویر کی کوئی تفصیل درج کریں۔")
