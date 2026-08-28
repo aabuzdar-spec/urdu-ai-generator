@@ -4,3 +4,7 @@ transformers
 accelerate
 deep-translator
 torch
+streamlit
+requests
+Pillow
+deep-translator
